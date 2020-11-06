@@ -7,9 +7,6 @@ terraform:
       #version: "1.13.0"
       version: "1.13.1"
       #version: "1.14.0"
-      #zone: jp-toc-4
-      #region: "us-south"
-      region: "tok"
 
 # https://github.com/IBM-Cloud/terraform-provider-ibm/tags
 
@@ -21,34 +18,42 @@ terraform:
 ### crn:v1:bluemix:public:power-iaas:tok04:a/528aa1cb0f3a4109ac0de69144428266:b3932fd0-26e5-4985-bbdf-72819abb3be9::      psvs-ise-tok04
 
 
-locals:
-  #power_instance_id: ef505604-0e8c-4287-815b-45b9687092fd
-  power_instance_id: b3932fd0-26e5-4985-bbdf-72819abb3be9
+# locals:
+#   #power_instance_id: ef505604-0e8c-4287-815b-45b9687092fd
+#   power_instance_id: b3932fd0-26e5-4985-bbdf-72819abb3be9
+
+variable:
+  pi_cloud_instance_id: {} # export TF_VAR_pi_cloud_instance_id=b3932fd0-26e5-4985-bbdf-72819abb3be9
 
 data:
 
 
-  ibm_pi_network:
-    power_networks_private:
-      #pi_network_name: test-nw-01
-      pi_network_name: tok-private-01
-      pi_cloud_instance_id: ${local.power_instance_id}
-  ibm_pi_public_network:
-    power_networks_public:
-      pi_cloud_instance_id: ${local.power_instance_id}
+#  ibm_pi_network:
+#    power_networks_private:
+#      #pi_network_name: test-nw-01
+#      pi_network_name: tok-private-01
+#      #pi_cloud_instance_id: ${local.power_instance_id}
+#      pi_cloud_instance_id: ${var.pi_cloud_instance_id}
+# # comment in if created
+#    ibm_pi_public_network:
+#      power_networks_public:
+#        #pi_cloud_instance_id: ${local.power_instance_id}
+#        pi_cloud_instance_id: ${var.pi_cloud_instance_id}
   ibm_pi_image:
     aix_image:
       #pi_image_name: demo-image_aix7200-03-03_w_iso
       pi_image_name: 7200-04-01
-      pi_cloud_instance_id: ${local.power_instance_id}
+      #pi_cloud_instance_id: ${local.power_instance_id}
+      pi_cloud_instance_id: ${var.pi_cloud_instance_id}
 #
 # # comment in resource
 #
-# resource:
-#   ibm_pi_network:
-#     power_networks_public:
-#       pi_network_name: public_net
-#       pi_network_type: pub-vlan
-#       pi_dns:
-#       - 8.8.4.4
-#       pi_cloud_instance_id: ${local.power_instance_id}
+resource:
+  ibm_pi_network:
+    power_networks_public:
+      pi_network_name: public_net
+      pi_network_type: pub-vlan
+      pi_dns:
+      - 8.8.4.4
+      #pi_cloud_instance_id: ${local.power_instance_id}
+      pi_cloud_instance_id: ${var.pi_cloud_instance_id}

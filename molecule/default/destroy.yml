@@ -9,7 +9,8 @@
   - name: Populate instance config
     shell: |-
       set -x
-      export IC_REGION=tok # us-south|toc
+      echo $IC_REGION
+      echo $TF_VAR_pi_cloud_instance_id
       terraform destroy --auto-approve -no-color || terraform destroy --auto-approve -no-color
     register: r
 

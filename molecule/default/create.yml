@@ -22,7 +22,8 @@
       ! ls *.tf.json || rm *.tf.json
       ! ls instance_conf-*.yml || rm instance_conf-*.yml
       ls *.tf.yml | awk '{TO=$1; sub(/.tf.yml$/,".tf.json",TO); print "yq . "$1" > "TO}' | bash -x
-      export IC_REGION=tok # us-south|toc
+      echo $IC_REGION
+      echo $TF_VAR_pi_cloud_instance_id
       terraform init -no-color
       terraform apply -auto-approve -no-color || terraform apply -auto-approve -no-color
     register: r

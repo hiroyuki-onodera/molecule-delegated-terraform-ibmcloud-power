@@ -4,5 +4,12 @@
 - debug: 
     var: ansible_distribution
 
-- debug: { var: ansible_distribution_version }
+- debug:
+    var: ansible_distribution_version
 
+- shell: cat /etc/motd
+  changed_when: false
+  register: r
+
+- debug:
+    var: r.stdout_lines
