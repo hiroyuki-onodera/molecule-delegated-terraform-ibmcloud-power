@@ -95,6 +95,7 @@ $ cat <<EOC >> ~/.bash_profile
 export IC_API_KEY="xxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxx"
 export IC_REGION=tok  # 東京の場合 tok, ダラスの場合 us-south
 export TF_VAR_pi_cloud_instance_id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+EOC
 $ . ~/.bash_profile
 ```
 
