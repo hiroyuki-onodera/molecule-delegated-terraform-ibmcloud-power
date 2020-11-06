@@ -1,0 +1,158 @@
+locals:
+  ins_name-ins01: ins01              # インスタンス名 要ユニーク (ibm_pi_keyにてibm_pi_instanceに依存せずに設定する為に使用)
+
+  # プライベート用ansible,inspec接続情報
+  # ansible_ssh_network-ins01: ${data.ibm_pi_network.power_networks_private.name}
+  # ansible_ssh_iptype-ins01: ip          # ssh接続に使用するip typeを選択: ip|external_ip
+
+  # パブリック用ansible,inspec接続情報
+  ansible_ssh_network-ins01: ${data.ibm_pi_public_network.power_networks_public.name}   # power_networks_publicを事前作成
+  #ansible_ssh_network-ins01: ${ibm_pi_network.power_networks_public.pi_network_name}   # power_networks_publicを都度作成
+  ansible_ssh_iptype-ins01: external_ip   # ssh接続に使用するip typeを選択: ip|external_ip
+
+  ansible_host-ins01: |-                  # ansibleやinspecがssh接続に使用するアドレス インターナルorパブリック
+    ${
+      ibm_pi_instance.ins-ins01.addresses[
+        index(
+          ibm_pi_instance.ins-ins01.addresses.*.network_name,
+          local.ansible_ssh_network-ins01
+        )
+      ][
+        local.ansible_ssh_iptype-ins01
+      ]
+    }
+
+#  ansible_host_private-ins01: |-          # プライベート接続用 ansibleやinspecがssh接続に使用するアドレス
+#    ${
+#      ibm_pi_instance.ins-ins01.addresses[
+#        index(
+#          ibm_pi_instance.ins-ins01.addresses.*.network_name,
+#          data.ibm_pi_network.power_networks_private.name
+#        )
+#      ][
+#        "ip"
+#      ]
+#    }
+
+resource:
+  ibm_pi_key:
+    key-ins01:
+      pi_key_name: key-ins01
+      #pi_ssh_key: ${file("../ssh-keys/id_rsa_${local.ins_name-ins01}.pub")}
+      pi_ssh_key: ${file("~/.ssh/id_rsa.pub")}
+      pi_cloud_instance_id: ${local.power_instance_id}
+#  ibm_pi_volume:
+#    ds_volume-ins01:
+#      pi_volume_name: tier3-10g-ins01
+#      pi_volume_type: tier3
+#      pi_volume_size: 10
+#      pi_volume_shareable: true
+#      pi_cloud_instance_id: ${local.power_instance_id}
+  ibm_pi_instance:
+    ins-ins01:
+      pi_instance_name: ${local.ins_name-ins01}
+      pi_memory: 2
+      pi_processors: 0.25
+      pi_proc_type: shared
+      pi_image_id: ${data.ibm_pi_image.aix_image.id}
+      pi_volume_ids:
+        #- ${ibm_pi_volume.ds_volume-ins01.volume_id}
+      pi_network_ids:
+        #- ${ibm_pi_network.power_networks_public.network_id}   # power_networks_publicを都度作成
+        - ${data.ibm_pi_public_network.power_networks_public.id} # power_networks_publicを事前作成
+        - ${data.ibm_pi_network.power_networks_private.id}
+      pi_key_pair_name: ${ibm_pi_key.key-ins01.pi_key_name}
+      pi_sys_type: s922   # s922|e880
+      pi_replication_policy: none
+      pi_replication_scheme: suffix
+      pi_replicants: 1
+      pi_cloud_instance_id: ${local.power_instance_id}
+      timeouts:
+        create: 30m
+        delete: 15m
+
+
+  local_file:
+    instance_conf-ins01:
+      filename: "./instance_conf-ins01.yml"
+      content: |
+        # this file is maintaind by terraform
+        ---
+        instance: ${local.ins_name-ins01}
+        address: ${ local.ansible_host-ins01 }
+        user: root
+        port: 22
+        identity_file: ~/.ssh/id_rsa
+
+
+
+#  local_file:
+#
+#    inv-ins01: # ansibleに与えるinventoryファイルを作成
+#      filename: ../inventory/${ibm_pi_instance.ins-ins01.pi_instance_name}
+#      content: >
+#        ${ibm_pi_instance.ins-ins01.pi_instance_name}
+#        ansible_host=${ local.ansible_host-ins01 }
+#        ansible_ssh_private_key_file=../ssh-keys/id_rsa_${ibm_pi_instance.ins-ins01.pi_instance_name}
+#        ansible_user=root
+#        ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+#        ansible_python_interpreter=auto_silent
+#
+#    vminfo-ins01: # inspecに与えるmemory, cpu情報
+#      filename: ../inventory/host_vars/${ibm_pi_instance.ins-ins01.pi_instance_name}/ibm_pi_instance.yml
+#      content: |
+#        # this file is maintaind by terraform
+#        ---
+#        ibm_pi_instance:
+#          pi_instance_name:      ${ibm_pi_instance.ins-ins01.pi_instance_name}
+#          pi_memory:             ${ibm_pi_instance.ins-ins01.pi_memory}
+#          pi_processors:         ${ibm_pi_instance.ins-ins01.pi_processors}
+#          pi_proc_type:          ${ibm_pi_instance.ins-ins01.pi_proc_type}
+#          pi_sys_type:           ${ibm_pi_instance.ins-ins01.pi_sys_type}
+#          pi_replication_policy: ${ibm_pi_instance.ins-ins01.pi_replication_policy}
+#          pi_replication_scheme: ${ibm_pi_instance.ins-ins01.pi_replication_scheme}
+#          pi_replicants:         ${ibm_pi_instance.ins-ins01.pi_replicants}
+#          ansible_ssh_iptype:    ${local.ansible_ssh_iptype-ins01}
+#
+#    inspec-ins01: # inspecコマンドに与える引数を作成
+#      filename: ../inspec/inspec_connect-${ibm_pi_instance.ins-ins01.pi_instance_name}
+#      content: >
+#        -t ssh://root@${ local.ansible_host-ins01 }
+#        -i ../ssh-keys/id_rsa_${ibm_pi_instance.ins-ins01.pi_instance_name}
+#
+#    hosts-ins01: # /etc/hostsを作成する元データを作成
+#      filename: ../hosts/${ibm_pi_instance.ins-ins01.pi_instance_name}
+#      content: >
+#        ${ibm_pi_instance.ins-ins01.addresses[index(ibm_pi_instance.ins-ins01.addresses.*.network_name, data.ibm_pi_network.power_networks_private.pi_network_name)].ip}
+#        ${ibm_pi_instance.ins-ins01.pi_instance_name}
+#
+#    gw-ins01: # ansibleに与えるプライベート用gw連携情報varsファイルを作成
+#      filename: ../inventory/host_vars/${ibm_pi_instance.ins-ins01.pi_instance_name}/ibm_pi_private_gw.yml
+#      content: |
+#        # this file is maintaind by terraform
+#        ---
+#        ibm_pi_private_gw: ${data.ibm_pi_network.power_networks_private.gateway}
+
+output:
+
+  ssh-ins01: # ssh接続コマンド (public or private)
+    value: ssh
+      -o UserKnownHostsFile=/dev/null
+      -o StrictHostKeyChecking=no
+      -i ../ssh-keys/id_rsa_${ibm_pi_instance.ins-ins01.pi_instance_name}
+      root@${ local.ansible_host-ins01 }
+
+#  ssh-ins01-private: # sshコマンド (private)
+#    value: ssh
+#      -o UserKnownHostsFile=/dev/null
+#      -o StrictHostKeyChecking=no
+#      -i ../ssh-keys/id_rsa_${ibm_pi_instance.ins-ins01.pi_instance_name}
+#      root@${ local.ansible_host_private-ins01 }
+
+#  ssh-ins01-via-icvs-01:
+#    value: ssh
+#      -o ProxyCommand="ssh -W %h:%p -i ~/.ssh/id_rsa_IBM_CL_IA $IBM_CL_IA_user@10.220.12.130"
+#      -o UserKnownHostsFile=/dev/null
+#      -o StrictHostKeyChecking=no
+#      -i ../ssh-keys/id_rsa_${ibm_pi_instance.ins-ins01.pi_instance_name}
+#      root@${ local.ansible_host_private-ins01 }
