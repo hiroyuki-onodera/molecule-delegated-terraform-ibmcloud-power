@@ -55,12 +55,24 @@ terraformのtfファイル以外はほぼ同等
     └── main.yml
 ```
 
-サンプルコードは以下 (TBD)
+サンプルコードは以下
 https://github.com/hiroyuki-onodera/molecule-delegated-terraform-ibmcloud-power
+
+```
+$ git clone https://github.com/hiroyuki-onodera/molecule-delegated-terraform-ibmcloud-power.git
+or
+$ git clone git@github.com:hiroyuki-onodera/molecule-delegated-terraform-ibmcloud-power.git
+or
+$ gh repo clone hiroyuki-onodera/molecule-delegated-terraform-ibmcloud-power
+```
+
 
 # CH1: Terraform による IBM Cloud AIX環境管理
 
 ## 事前準備:
+
+IBM Cloudにアカウントを作成してログイン
+https://cloud.ibm.com/login
 
 https://qiita.com/c_u/items/10e3295023aa1a3b3c96
 を参考に、以下の情報を入手。
@@ -69,17 +81,18 @@ https://qiita.com/c_u/items/10e3295023aa1a3b3c96
 - pi_cloud_instance_id
 - リージョン情報
 
-#### IBM Cloud API キー
+### IBM Cloud API キー
 
-IBM Cloud コンソール => 管理 => アクセス(IAM) => IBM Cloud API キーから作成して使用。
-作成時に ID が確認できる。
+IBM Cloud コンソール => (上部バーの)管理 => (プルダウンメニューの)アクセス(IAM) => (左メニューの)API キー => 「IBM Cloud API キーの作成」ボタンから作成して使用
+作成時に IBM Cloud API キーの確認やファイルとしてのダウンロードが可能
 
-#### Power Systems Virtual Serverサービスの作成
+### Power Systems Virtual Serverサービスの作成
 
 ダッシュボード右上のリソースの作成などからカタログメニューに行き、Power Systems Virtual Serverを検索して選択
 リージョンの選択 にて、この例では 東京 04 を選択
+右下の作成ボタンを押す
 
-#### pi_cloud_instance_id
+### pi_cloud_instance_id
 
 上で作成したサービスを示すID。
 作成後に確認するには、IBM Cloud Console => サービスリスト => Services下の、作成した Power Systems Virtual Server サービスの行を選択 => 右に表示されるサービス情報の GUID が該当。
@@ -109,9 +122,9 @@ $ . ~/.bash_profile
 - .tf.jsonフォーマットは人が直接使用するには難しい
 - ここでは、.tf.jsonをYAMLで表記したファイルにてPOWER環境設定を行い、terraform使用前にjson化する
 - 最初から.tfフォーマットや.tf.jsonフォーマットで記述、管理するならばYAML管理は不要
-- common.tf.yml は、providerやネットワーク定義など個別のインスタンスに1:1で対応しない設定をまとめたもの。
+- tf_common.tf.yml は、providerやネットワーク定義など個別のインスタンスに1:1で対応しない設定をまとめたもの。
 
-```yaml:molecule/default/common.tf.yml
+```yaml:molecule/default/tf_common.tf.yml
 ---
 terraform:
   required_version: ">= 0.13.3"
@@ -140,13 +153,13 @@ resource:
 
 ## terraform による インスタンス固有の定義
 
-- インスタンス名.tf.ymlは、インスタンスに1:1で対応する資源をまとめたもの
+- tf_インスタンス名.tf.ymlは、インスタンスに1:1で対応する資源をまとめたもの
 - インスタンス毎に1ファイルの想定
 - j2などテンプレートエンジンを用いての作成は、どの範囲までユーザー指定とするかなど環境、プロジェクト依存の項目が多く、不必要に複雑化する為に断念。シンプルにこのファイル内での直接指定による設定としている。
 - 作成したインスタンスへの接続情報はlocal_file:リソースを用いてMoleculeに連携する
 - ユーザー利便を考慮してsshログイン方法をoutputにて表示
 
-```yaml:molecule/default/ins01.tf.yml
+```yaml:molecule/default/tf_ins01.tf.yml
 ---
 locals:
   ins_name-ins01: ins01
@@ -203,6 +216,8 @@ output:
 
 この例では、自動的に割り振られるOS用のディスク以外に、追加で10GBのディスクを割り当て。
 
+ちなみに、追加のディスクなしで、最小構成(IBM POWER9 s922, 0.25 コア, メモリー 2 GB, プロセッサー 上限なし共有)とした場合、割り振ったままだと月額6073円程度、Tier 3 10GBのディスクを追加して月額6199円程度の様子。
+負担を減らすには都度削除しましょう。
 
 local_fileを使用して、インスタンスへの接続方法をmoleculeに対して連携する
 
@@ -344,7 +359,7 @@ dependency:
   name: galaxy
 driver:
   name: delegated
-platforms: # terraformにて作成するec2インスタンスと名前が合致する必要がある
+platforms: # terraformにて作成するインスタンスと名前が合致する必要がある
   - name: ins01
 provisioner:
   name: ansible
